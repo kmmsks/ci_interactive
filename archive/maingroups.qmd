@@ -1,0 +1,59 @@
+---
+title: "Untitled"
+format: html
+engine: knitr
+execute:
+  echo: false
+  warning: false
+---
+
+```{r}
+library(data.table)
+library(here)
+library(readxl)
+library(magrittr)
+library(stringr)
+library(ggplot2)
+library(ggsci)
+library(plotly)
+
+source("0_settings.R", encoding = "UTF-8")
+
+#theme_set(theme_bw())
+theme_set(theme_classic()+ theme(panel.grid.major.y = element_line(colour = "gray90")))
+
+dat <- fread("fig_dat_mainresults.csv")
+
+dat[,sukup := factor(sukup, levels = labs_lst$sukup$val, labels = labs_lst$sukup$lab)]
+dat[, sample := factor(sample, levels = labs_lst$sample$val, labels = labs_lst$sample$lab)] 
+
+```
+
+
+# Main groups
+
+```{r}
+d <- dat[type == "pr" & year == 2019 & sample == labs_lst$sample$lab[1] & dg %in% paste0("f", seq(1,9))]
+
+  w <- d[sukup == labs_lst$sukup[val == 2,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))
+  
+  w %<>% ggplotly()
+
+  m <- d[sukup == labs_lst$sukup[val == 1,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10)) 
+  
+  m %<>% ggplotly()
+
+```
+
+```{r}
+subplot(w, m, nrows=1)
+```
+

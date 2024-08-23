@@ -1,0 +1,420 @@
+---
+title: "Online Supplement"
+format: dashboard
+server: shiny
+---
+  
+```{r}
+#| context: setup
+library(data.table)
+library(here)
+library(readxl)
+library(magrittr)
+library(stringr)
+library(ggplot2)
+library(ggsci)
+library(plotly)
+library(flextable)
+library(zoo)
+
+# numb() to control the format of numberic results, output as character
+numb <- function(x, n_decim = 2, big_mark = " ", decim_mark = "."){
+  #format(as.numeric(sprintf(paste0("%.", numb_in$n_decim, "f"), x)), big.mark = big_mark) #·
+  formatC(x, big.mark = big_mark, decimal.mark = decim_mark, digits = n_decim, format = 'f')
+  }
+
+source("0_settings.R", encoding = "UTF-8")
+
+# read data
+dat <- fread("to_interactive.csv")
+
+m1 <- c(paste0("f1", seq(0,9)), paste0("f60", seq(0,9)), paste0("f7", seq(0,9)), paste0("f9", seq(1,9)))
+m2 <- data.table(sukup = c(rep(1, length(m1)), rep(2, length(m1))), year = pr_year, type = "pr", est = 0, upper = 0, lower = 0, dg = c(m1, m1))
+
+missing_dgs <- rbindlist(list(
+  all = m2,
+  esh = m2,
+  inpatient = m2
+), idcol = "sample")
+
+dat <- rbindlist(list(dat, missing_dgs), fill = T)
+
+# filter diagnoses that will be presented
+dat <- dat[dg %in% dgs_tbl[specific_dgs==1, dg]]
+
+# set labels
+dat[,sukup := factor(sukup, levels = labs_lst$sukup$val, labels = labs_lst$sukup$lab)]
+dat[, sample := factor(sample, levels = labs_lst$sample$val, labels = labs_lst$sample$lab)] 
+
+dat[, samp:= sample]
+
+dat[, type_lab := factor(type, levels = labs_lst$type$val, labels = labs_lst$type$lab)]
+
+dat[, dg_lab := factor(dg, levels = dgs_tbl$dg, labels = dgs_tbl$labs)]
+
+# for plots comparing diagnostic categories
+selected_dgs <- c("f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9")
+
+pr_year <- 2019
+
+# upper limit for y-axis scales
+ceiling_max <- function(x){
+    ifelse(x>10 & x<15, 15, 
+           ifelse(x >= 15, ceiling(x / 10)*10 , 
+           ifelse(x <1, ceiling(x * 10)/10, x %>% ceiling())))
+  }
+
+# This function makes an individual plot (gender-spcific) for tab "All"
+
+draw_main_part <- function(dat_in, sukup_in, ir = T, unit_percent= T, ylab_in = "est", xlab_in = "x", width_in = 0, thickness_in = 1, hoverdistance_in = 50){
+  
+  #determine y-axis max value for all genders
+    if(ir){
+      ym <- dat_in[, max(upper) %>% ceiling_max()]
+    } else {
+      ym <- dat_in[, max(est, na.rm = T) %>% ceiling_max()]
+      }
+
+  # the plot fundamentals
+   p <- dat_in[sukup == labs_lst$sukup[val == sukup_in,lab]] %>% 
+    plot_ly(y = ~est, x = ~x, color = ~samp, type = 'scatter', mode = 'lines', #legendgroup=~sample,  
+             colors = pal_jama("default", alpha = 1)(3),
+            hoverinfo = "text",
+            showlegend = F
+            ) %>% 
+    layout(yaxis = list(range = c(0, ym), title = ylab_in),  xaxis = list(range = c(0, 100), showgrid = FALSE, dtick = 10, title = xlab_in))
+  
+   # set errorbars and hover text for each row (CI, IR, PR)
+    if(ir & unit_percent){
+      p %<>%  
+        add_trace(
+          error_y = ~list(symmetric = FALSE,
+                          array = upper - est,
+                          arrayminus = est -lower,
+                          thickness = thickness_in,
+                          width = width_in))
+        
+        # add_ribbons(
+        # ymin = ~lower,
+        # ymax = ~upper,
+        # line = list(color = 'rgba(7, 164, 181, 0.05)')
+        # ) 
+      
+      p %<>%
+        add_trace(
+          hovertext = ~ paste0(est %>% numb(), "% (", lower %>% numb, "–", upper %>% numb(), ")", "<br>", "Age: ", x, "<br>", "<b>", samp ,"</b>"))
+
+      p %<>% layout(hoverdistance = hoverdistance_in)  
+      
+    } else if(ir & !unit_percent){
+      p %<>%  
+        add_trace(
+          error_y = ~list(symmetric = FALSE,
+                          array = upper - est,
+                          arrayminus = est -lower,
+                          thickness = thickness_in,
+                          width = width_in))
+
+       # p %<>%  add_ribbons(
+       #   ymin = ~lower,
+       #   ymax = ~upper,
+       #   line = list(color = 'rgba(7, 164, 181, 0.05)')
+       #   ) 
+      
+      p %<>%  add_trace(
+        hovertext = ~ paste0(est %>% numb(), " (", lower %>% numb, "–", upper %>% numb(), ")", "<br>", "Age: ", x, "<br>", "<b>", samp ,"</b>"))
+      
+      p %<>% layout(hoverdistance = hoverdistance_in)
+    }
+   
+   else{
+      p %<>%  add_trace(
+        hovertext = ~ paste0(est %>% numb, "%", "<br>", "Age: ", x, "<br>", "<b>", samp ,"</b>"))
+      }
+   p
+}
+
+# This combines two plots (Women and Men) to a single row in the tab "All".  In the tab "All" this function is called for
+# CI, IR, and PR  rows separately
+combine_main_parts <- function(d_in, yl_in = "est", xl_in = "x", ir_in = T, unit_percent_in = T, subplot_title = "title", dg_lab_in ="dg_"){
+  a <- draw_main_part(d_in, sukup_in = 2, ylab_in = yl_in, xlab_in = xl_in, ir = ir_in, unit_percent = unit_percent_in)
+  b <- draw_main_part(d_in, sukup_in = 1, ylab_in = yl_in, xlab_in = xl_in, ir = ir_in, unit_percent = unit_percent_in)
+
+  p <- subplot(a, b, titleY = T, titleX = T, margin = c(.01, .05, .02, .02)) %>%
+    layout(title = paste0(subplot_title, ": ", dg_lab_in),
+           annotations = list(
+       #      list(x = -0.05, y = .5,  text = yl_in,  showarrow = F, xref='paper', yref='paper', textangle = 270),
+             list(x = 0.2 , y = 1, text = "Women",  showarrow = F, xref='paper', yref='paper'),
+             list(x = 0.8 , y = 1, text = "Men",    showarrow = F, xref='paper', yref='paper'))
+)
+  p
+}
+
+# BY Sample --------------------------------------------------------------------
+
+draw_dgs_combined_by_sample_part <- function(dat_in, sukup_in, ir = T, unit_percent = T, ylab_in = "est", xlab_in = "x", width_in = 0, thickness_in = 1.5){
+    if(ir){ym <- dat_in[, max(upper) %>% ceiling_max()]
+    } else {
+      ym <- dat_in[, max(est, na.rm = T) %>% ceiling_max()]
+      }
+
+   p <- dat_in[sukup == labs_lst$sukup[val == sukup_in,lab]] %>% .[order(dg)] %>%  # see https://github.com/plotly/plotly.R/issues/1657
+     merge(., dgs_tbl[,.(dg, gr = code, out)], by = "dg", all.x = T) %>% 
+    plot_ly(y = ~est, x = ~x, color = ~gr, type = 'scatter', mode = 'lines', colors = "Paired",
+            hoverinfo = "text",
+            showlegend = T
+            ) %>% 
+    layout(yaxis = list(range = c(0, ym), title = ylab_in),  xaxis = list(range = c(0, 100), showgrid = FALSE, dtick = 10, title = xlab_in))
+  
+    if(ir & unit_percent){
+      p %<>%  
+        add_trace(
+          error_y = ~list(symmetric = FALSE,
+                    array = upper - est,
+                    arrayminus = est -lower,
+                  #  color = 'black', 
+                    thickness = thickness_in,
+                    width = width_in
+                    ),
+    hovertext = ~ paste0(est %>% numb(), "% (", lower %>% numb, "–", upper %>% numb(), ")", "<br>", "Age: ", x, "<br>", "<b>", out ,"</b>"), showlegend = F)
+    } else if (ir & !unit_percent){
+      p %<>%  
+        add_trace(
+          error_y = ~list(symmetric = FALSE,
+                    array = upper - est,
+                    arrayminus = est -lower,
+                  #  color = 'black', 
+                    thickness = thickness_in,
+                    width = width_in
+                    ),
+    hovertext = ~ paste0(est %>% numb(), " (", lower %>% numb, "–", upper %>% numb(), ")", "<br>", "Age: ", x, "<br>", "<b>", out ,"</b>"), showlegend = F)
+    } else{
+      p %<>%  add_trace(
+      hovertext = ~ paste0(est %>% numb(), "%", "<br>", "Age: ", x, "<br>", "<b>", out,"</b>"), showlegend = F)
+      }
+   p
+}
+
+combine_dg_parts <- function(d_in, yl_in = "est", xl_in = "x", subplot_title = "title", ir_in = T, unit_percent_in = T){
+  w <- draw_dgs_combined_by_sample_part(dat_in =  d_in, sukup_in = 2, ylab_in = yl_in, xlab_in = xl_in, ir = ir_in, unit_percent = unit_percent_in)
+  m <- draw_dgs_combined_by_sample_part(dat_in =  d_in, sukup_in = 1, ylab_in = yl_in, xlab_in = xl_in, ir = ir_in, unit_percent = unit_percent_in)
+
+   p <- subplot(w, m %>%plotly::style(showlegend = FALSE), titleY = T, titleX = T, margin = c(.01, .05, .02, .02)) %>%
+    layout(title = subplot_title,
+           annotations = list(
+             list(x = 0.2 , y = 1, text = "Women", showarrow = F, xref='paper', yref='paper'),
+             list(x = 0.8 , y = 1, text = "Men", showarrow = F, xref='paper', yref='paper'))
+)
+  p
+}
+
+
+
+```
+
+
+# Main
+
+## {.sidebar width="300px"}
+
+```{r}
+radioButtons('dg', 'Diagnosis', choiceValues = dgs_tbl[specific_dgs == 1, dg], choiceNames =  dgs_tbl[specific_dgs == 1, out])
+```
+
+## Column
+
+```{r}
+plotlyOutput("p1")
+```
+
+```{r}
+plotlyOutput('p2')
+```
+
+```{r}
+plotlyOutput('p3')
+```
+
+# Cumulative Incidence
+
+## {.toolbar}
+
+```{r}
+radioButtons('sample_ci', '', labs_lst$sample$lab, inline = T)
+```
+
+## Row
+
+```{r}
+
+plotlyOutput('ci')
+```
+
+# Incidence Rates
+
+## {.toolbar}
+
+```{r}
+radioButtons('sample_ir', '', labs_lst$sample$lab, inline = T)
+```
+
+## Row
+
+```{r}
+plotlyOutput('ir')
+```
+
+# Service Utilization
+
+## {.toolbar}
+
+```{r}
+radioButtons('sample_pr', '', labs_lst$sample$lab, inline = T)
+```
+
+## Row
+
+```{r}
+
+plotlyOutput('pr')
+
+#tableOutput('data')
+
+```
+
+
+# ICD-10 Sub-Chapter Categories
+
+## {.sidebar width="300px"}
+
+```{r}
+
+selectInput("maingroup_dg", "", dgs_tbl[maingroup == T, labs])
+radioButtons('type_maingroup', HTML('<b>Estimates of Interest</b>'), labs_lst$type$lab, inline = F)
+radioButtons('sample_maingroup', HTML('<b>Type of Contacts</b>'), labs_lst$sample$lab, inline = F)
+
+
+```
+
+
+## Row
+
+```{r}
+plotlyOutput("maingroup")
+```
+
+
+# Info
+
+## Row {.flow}
+
+This is an online supplement to 
+
+**Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization in Primary and Secondary Care**
+
+<br><br>
+
+Cumulative incidence estimates the percentage of individuals who receive a mental disorder diagnosis by a certain age.
+
+Incidence rates across the age range depict the number of people with a first-time mental disorder diagnosis per 10 000 person-years at risk.
+
+Service utilization rate depicts the percentage of individuals aged under 100 years who had a health care visit with a mental disorder diagnosis in the year `r pr_year`and were included in the study population on December 31, `r pr_year`.
+
+For now, cite this 
+
+
+```{r}
+#| title: "The following ICD-10 diagnostic categories are included:"
+dgs_tbl[code == "F00-F99", labs := "Any mental disorder (F00-F99)"] %>% 
+  .[specific_dgs==T, .(code, labs, maingroup, group = maingroup %>% as.character)] %>% 
+  .[maingroup == F , labs := labs %>% word(end = -2)] %>% 
+  .[maingroup == T, group := labs] %>% 
+  .[group == "FALSE", group := NA_character_] %>% .[, group := zoo::na.locf(group)] %>% 
+  .[maingroup == F, .(group, Diagnosis = labs, Code = code)] %>% 
+  as_grouped_data(groups = "group") %>%  as_flextable(hide_grouplabel = TRUE, separate_with = "group") %>% 
+  bold(i = ~is.na(Code)) %>%
+   padding(i = ~!is.na(Code), padding.left=20) %>% 
+  theme_box() %>% autofit()
+```
+
+
+
+```{r}
+#| context: server
+
+# dataset: All data needed for the tab "All"
+
+dataset <- reactive({
+  dat[dg == input$dg]
+})
+
+
+dat_ci <- reactive({
+ dat[sample == input$sample_ci & type == "ci" & dg %in% selected_dgs]
+})
+dat_ir <- reactive({
+ dat[sample == input$sample_ir & type == "ir" & dg %in% selected_dgs]
+})
+dat_pr <- reactive({
+ dat[sample == input$sample_pr & type == "pr" & dg %in% selected_dgs & year == pr_year]
+})
+
+
+dat_maingroup <- reactive({
+ dat[sample == input$sample_maingroup & type_lab == input$type_maingroup & (year == pr_year | is.na(year)) & 
+       dg %in% dgs_tbl[dg_maingroup == dgs_tbl[labs == input$maingroup_dg, dg_maingroup], dg]]
+})
+
+output$p1 <- renderPlotly({
+  d <- dataset() %>% .[type == "ci"] 
+
+  d %>% combine_main_parts(yl_in = labs_lst_short$ci_ax_title, xl_in = labs_lst$age_title, subplot_title = paste(labs_lst_short$ci_title, labs_lst_short$confint), dg_lab_in = dgs_tbl[dg == .[,dg %>% unique()], labs_main])
+  })
+
+output$p2 <- renderPlotly({
+  d <- dataset() %>% .[type == "ir"]
+  
+  d %>% combine_main_parts(yl_in = labs_lst_short$ir_ax_title, xl_in = labs_lst$age_title, subplot_title = paste(labs_lst_short$ir_title, labs_lst_short$confint), dg_lab_in = dgs_tbl[dg == .[,dg %>% unique()], labs_main], unit_percent_in = F)
+
+})
+
+output$p3 <- renderPlotly({
+  d <- dataset() %>% .[type == "pr" & year == 2019]
+
+  d %>% combine_main_parts(yl_in = labs_lst_short$pr_ax_title, xl_in = labs_lst$age_title, subplot_title = labs_lst_short$pr_title, dg_lab_in = dgs_tbl[dg == .[,dg %>% unique()], labs_main], ir_in = F)
+
+  })
+
+output$data <- renderTable({
+  dataset() %>% .[x %in% c(25, 50, 75, 100) & type != "pr"] %>% 
+    .[, out := paste0(est, " (", lower, "-", upper, ")")] %>% 
+    dcast(type+sample~sukup+x, value.var = "out")
+})
+
+#output$comparison <- renderTable({dat_comparison() %>% head()})
+
+
+output$ci <- renderPlotly({
+combine_dg_parts(dat_ci(), yl_in = labs_lst$ci_ax_title, xl_in = labs_lst$age_title, subplot_title = paste(labs_lst$ci_title, labs_lst_short$confint))
+})
+
+output$ir <- renderPlotly({
+combine_dg_parts(dat_ir() %>% .[dg != "f0"] , yl_in = labs_lst$ir_ax_title, xl_in = labs_lst$age_title, subplot_title = paste(labs_lst$ir_title, labs_lst_short$confint), unit_percent_in = F)
+})
+
+output$pr <- renderPlotly({
+combine_dg_parts(dat_pr(), yl_in = labs_lst$pr_ax_title, xl_in = labs_lst$age_title, subplot_title = labs_lst$pr_title, ir_in = F)
+})
+
+output$maingroup <- renderPlotly({
+  if(input$type_maingroup == labs_lst$type[val == "ci", lab]){
+    combine_dg_parts(dat_maingroup(), yl_in = labs_lst$ci_ax_title, xl_in = labs_lst$age_title, subplot_title = paste0(paste(labs_lst$ci_title,labs_lst_short$confint) , ": ", input$sample_maingroup), ir_in = T)
+  }else if (input$type_maingroup == labs_lst$type[val == "ir", lab]){
+    combine_dg_parts(dat_maingroup(), yl_in = labs_lst$ir_ax_title, xl_in = labs_lst$age_title, subplot_title = paste0(paste(labs_lst$ir_title, labs_lst_short$confint), ": ", input$sample_maingroup), ir_in = T)
+  } else {
+    combine_dg_parts(dat_maingroup(), yl_in = labs_lst$pr_ax_title, xl_in = labs_lst$age_title, subplot_title = paste0(labs_lst$pr_title, ": ", input$sample_maingroup), ir_in = F)
+  }
+    }) 
+
+
+```

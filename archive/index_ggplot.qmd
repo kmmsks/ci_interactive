@@ -1,0 +1,113 @@
+---
+title: "Diamonds Explorer"
+author: "Barkamian Analytics"
+format: dashboard
+server: shiny
+---
+  
+```{r}
+#| context: setup
+library(data.table)
+library(here)
+library(readxl)
+library(magrittr)
+library(stringr)
+library(ggplot2)
+library(ggsci)
+library(patchwork)
+#library(plotly)
+
+source("0_settings.R", encoding = "UTF-8")
+
+#theme_set(theme_bw())
+theme_set(theme_classic()+ theme(panel.grid.major.y = element_line(colour = "gray90")))
+
+dat <- fread("fig_dat_mainresults.csv")
+
+dat[,sukup := factor(sukup, levels = labs_lst$sukup$val, labels = labs_lst$sukup$lab)]
+dat[, sample := factor(sample, levels = labs_lst$sample$val, labels = labs_lst$sample$lab)] 
+
+
+draw_fig <- function(dat_in, show_errorbar = T, ylab_in = "est", xlab_in = "x", type_in){
+  w <- dat_in[sukup == labs_lst$sukup[val == 2,lab]] %>% 
+    ggplot(aes(y = est, x = x, color = factor(sample)))+
+    geom_line()+
+    {if(show_errorbar) geom_errorbar(aes(ymin =lower, ymax=upper), color = "black", width = .5)}+
+    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))+
+#    scale_y_continuous(limits = c(0, ymax_in), expand = c(0,0))+
+    scale_color_jama()
+
+  m <- dat_in[sukup == labs_lst$sukup[val == 1,lab]] %>% 
+    ggplot(aes(y = est, x = x, color = factor(sample)))+
+    geom_line()+
+    {if(show_errorbar) geom_errorbar(aes(ymin =lower, ymax=upper), color = "black", width = .5)}+
+    labs(subtitle = labs_lst$sukup[val == 1,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))+
+#    scale_y_continuous(limits = c(0, ymax_in), expand = c(0,0))+
+    scale_color_jama()
+
+  w + m +  plot_layout(guides = 'collect') + 
+    plot_annotation(title = paste0(type_in, ": ", dgs_tbl[dg == dat_in[,unique(dg)], labs]))
+}
+
+
+
+```
+
+# {.sidebar}
+
+```{r}
+radioButtons('dg', 'foo', c(dgs_tbl[!(dg %in% c("any_psy", "f_any")), dg]))
+```
+
+# Plots
+
+```{r}
+plotOutput("p1")
+```
+
+```{r}
+plotOutput('p2')
+```
+
+```{r}
+plotOutput('p3')
+```
+
+# Data
+
+```{r}
+tableOutput('data')
+```
+
+
+```{r}
+#| context: server
+
+dataset <- reactive({
+  dat[dg == input$dg]
+})
+
+
+output$p1 <- renderPlot({
+dataset() %>% .[type == "ci"] %>%
+    draw_fig(type_in = "Cumulative incidence")
+  })
+
+output$p2 <- renderPlot({
+  dataset() %>% .[type == "ir"] %>%
+    draw_fig(type_in = "Incidence rate")
+})
+
+output$p3 <- renderPlot({
+  dataset() %>% .[type == "pr" & year == 2019] %>%
+    draw_fig(type_in = "Prevalence")
+  })
+
+output$data <- renderTable({
+  dataset() %>% .[x %in% c(25, 50, 75, 100) & type != "pr"] %>% 
+    .[, out := paste0(est, " (", lower, "-", upper, ")")] %>% 
+    dcast(type+sample~sukup+x, value.var = "out")
+})
+```

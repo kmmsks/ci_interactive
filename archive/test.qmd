@@ -1,0 +1,201 @@
+---
+title: "Diamonds Explorer"
+author: "Barkamian Analytics"
+format: dashboard
+server: shiny
+---
+  
+```{r}
+#| context: setup
+library(data.table)
+library(here)
+library(readxl)
+library(magrittr)
+library(stringr)
+library(ggplot2)
+library(ggsci)
+#library(patchwork)
+library(plotly)
+
+source("0_settings.R", encoding = "UTF-8")
+
+#theme_set(theme_bw())
+theme_set(theme_classic()+ theme(panel.grid.major.y = element_line(colour = "gray90")))
+
+dat <- fread("fig_dat_mainresults.csv")
+
+dat[,sukup := factor(sukup, levels = labs_lst$sukup$val, labels = labs_lst$sukup$lab)]
+dat[, sample := factor(sample, levels = labs_lst$sample$val, labels = labs_lst$sample$lab)] 
+
+ceiling_max <- function(x){
+    ifelse(x >= 10, ceiling(x / 10)*10 , ifelse(x <1, ceiling(x * 10)/10, x %>% ceiling()))
+  }
+
+
+draw_fig <- function(dat_in, sukup_in, ir = T, ylab_in = "est", xlab_in = "x", type_in){
+  
+    if(ir){ym <- dat_in[, max(upper) %>% ceiling_max()]} else 
+    {ym <- dat_in[, max(est, na.rm = T) %>% ceiling_max()]}
+
+   p <- dat_in[sukup == labs_lst$sukup[val == sukup_in,lab]] %>% 
+    plot_ly(y = ~est, x = ~x, color = ~sample, legendgroup=~sample,  type = 'scatter', mode = 'lines', 
+            hoverinfo = "text",
+            showlegend = F
+            ) %>% 
+    layout(yaxis = list(range = c(0, ym), title = ylab_in),  xaxis = list(range = c(0, 100), showgrid = FALSE, dtick = 10, title = xlab_in))
+  
+    if(ir){p %<>%  add_trace(
+    error_y = ~list(symmetric = FALSE,
+                    array = upper - est,
+                    arrayminus = est -lower,
+                    color = 'gray', 
+                    width = 0),
+    hovertext = ~ paste0(est, "% (", lower, "–", upper, ")", "<br>", "Age: ", x ))
+    } else{
+      p %<>%  add_trace(
+      hovertext = ~ paste0(est, "%", "<br>", "Age: ", x ))
+      }
+
+
+  
+#    p <- dat_in[sukup == labs_lst$sukup[val == sukup_in, lab]] %>% 
+#     ggplot(aes(y = est, x = x, color = factor(sample)))+
+#     geom_line()+
+#     {if(show_errorbar) geom_errorbar(aes(ymin =lower, ymax=upper), color = "black", width = .5)}+
+#     labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+#     scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))+
+# #    scale_y_continuous(limits = c(0, ymax_in), expand = c(0,0))+
+#     scale_color_jama()
+# 
+#   m <- dat_in[sukup == labs_lst$sukup[val == 1,lab]] %>% 
+#     ggplot(aes(y = est, x = x, color = factor(sample)))+
+#     geom_line()+
+#     {if(show_errorbar) geom_errorbar(aes(ymin =lower, ymax=upper), color = "black", width = .5)}+
+#     labs(subtitle = labs_lst$sukup[val == 1,lab], y = ylab_in, x = xlab_in, color = "")+
+#     scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))+
+# #    scale_y_continuous(limits = c(0, ymax_in), expand = c(0,0))+
+#     scale_color_jama()
+
+#  ggplotly(p)
+   p
+
+  }
+
+
+
+
+```
+
+# {.sidebar}
+
+```{r}
+radioButtons('dg', 'foo', c(dgs_tbl[!(dg %in% c("any_psy", "f_any")), dg]))
+```
+
+# Plots
+
+```{r}
+plotlyOutput("p1")
+```
+
+```{r}
+plotlyOutput('p2')
+```
+
+```{r}
+plotlyOutput('p3')
+```
+
+# Prevalence: Main groups
+
+```{r}
+d <- dat[type == "pr" & year == 2019 & sample == labs_lst$sample$lab[1] & dg %in% paste0("f", seq(1,9))]
+
+  w <- d[sukup == labs_lst$sukup[val == 2,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))
+  
+  w %<>% ggplotly()
+
+  m <- d[sukup == labs_lst$sukup[val == 1,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10)) 
+  
+  m %<>% ggplotly()
+
+subplot(w, m, nrows=1)
+```
+
+# Cumulative incidence: Main groups
+
+```{r}
+d <- dat[type == "ci" & sample == labs_lst$sample$lab[1] & dg %in% paste0("f", seq(0,9))]
+
+  w <- d[sukup == labs_lst$sukup[val == 2,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10))
+  
+  w %<>% ggplotly()
+
+  m <- d[sukup == labs_lst$sukup[val == 1,lab]] %>%
+    ggplot(aes(y = est, x = x, color = factor(dg)))+
+    geom_line()+
+#    labs(subtitle = labs_lst$sukup[val == 2,lab], y = ylab_in, x = xlab_in, color = "")+
+    scale_x_continuous(limits = c(0,100), breaks = seq(0, 100, 10)) 
+  
+  m %<>% ggplotly()
+
+subplot(w, m, nrows=1)
+```
+
+# Data
+
+```{r}
+tableOutput('data')
+```
+
+
+```{r}
+#| context: server
+
+dataset <- reactive({
+  dat[dg == input$dg]
+})
+
+
+output$p1 <- renderPlotly({
+  d <- dataset() %>% .[type == "ci"] 
+
+  a <- draw_fig(d, sukup_in = 2, type_in = "Cumulative incidence")
+  b <- draw_fig(d, sukup_in = 1, type_in = "Cumulative incidence")
+  subplot(a, b)
+  })
+
+output$p2 <- renderPlotly({
+  d <- dataset() %>% .[type == "ir"]
+  
+  a <- draw_fig(d, sukup_in = 2, type_in = "Cumulative incidence")
+  b <- draw_fig(d, sukup_in = 1, type_in = "Cumulative incidence")
+  subplot(a, b)
+})
+
+output$p3 <- renderPlotly({
+  d <- dataset() %>% .[type == "pr" & year == 2019]
+  
+  a <- draw_fig(d, sukup_in = 2, ir = F, type_in = "Cumulative incidence")
+  b <- draw_fig(d, sukup_in = 1, ir = F, type_in = "Cumulative incidence")
+  subplot(a, b)
+  })
+
+output$data <- renderTable({
+  dataset() %>% .[x %in% c(25, 50, 75, 100) & type != "pr"] %>% 
+    .[, out := paste0(est, " (", lower, "-", upper, ")")] %>% 
+    dcast(type+sample~sukup+x, value.var = "out")
+})
+```
