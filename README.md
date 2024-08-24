@@ -6,3 +6,6 @@ This is an online supplement to a manuscript called
 
 Author: Kimmo Suokas
 
+Source code: <https://github.com/kmmsks/ci_interactive>
+
+
