@@ -306,7 +306,7 @@ plotlyOutput("maingroup")
 
 This is an online supplement to
 
-**Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization in Primary and Secondary Care**
+**Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization**
 
 <br><br>
 
@@ -318,7 +318,7 @@ Service utilization rate depicts the percentage of individuals aged under 100 ye
 
 For now, please cite this page as below. In the future, please cite the article (once published).
 
-Suokas, K. (2024-08-24). Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization in Primary and Secondary Care - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
+Suokas, K. (2024-08-24). Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
 
 Version: 0.0.0-beta (2024-08-24)
 
