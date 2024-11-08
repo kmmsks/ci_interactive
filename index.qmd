@@ -306,7 +306,7 @@ plotlyOutput("maingroup")
 
 This is an online supplement to
 
-**Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization**
+**Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study**
 
 <br><br>
 
