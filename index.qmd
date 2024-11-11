@@ -316,11 +316,13 @@ Incidence rates across the age range depict the number of people with a first-ti
 
 Service utilization rate depicts the percentage of individuals aged under 100 years who had a health care visit with a mental disorder diagnosis in the year `r pr_year`and were included in the study population on December 31, `r pr_year`.
 
-For now, please cite this page as below. In the future, please cite the article (once published).
+For now, please cite this page as:
 
-Suokas, K. (2024-08-24). Lifetime Incidence and Age of Onset of Mental Disorders, and 12-Month Service Utilization - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
+Suokas, K. (2024-11-11). Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
 
-Version: 0.0.0-beta (2024-08-24)
+In the future, please cite the article (once published).
+
+Version: 0.0.1-beta (2024-11-11)
 
 Source code: <https://github.com/kmmsks/ci_interactive>
 
