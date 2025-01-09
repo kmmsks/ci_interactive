@@ -318,11 +318,11 @@ Service utilization rate depicts the percentage of individuals aged under 100 ye
 
 For now, please cite this page as:
 
-Suokas, K. (2024-11-11). Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
+Suokas, K. (2025-01-09). Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
 
 In the future, please cite the article (once published).
 
-Version: 0.0.1-beta (2024-11-11)
+Version: 0.0.2-submitted (2025-01-09)
 
 Source code: <https://github.com/kmmsks/ci_interactive>
 
