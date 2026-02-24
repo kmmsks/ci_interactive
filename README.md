@@ -22,7 +22,7 @@ This repository contains the source code for the online supplements.
 Author of the software: Kimmo Suokas
 
 
-Version: 0.1.0 (identical to 0.0.2-submitted; 2025-01-09)
+Version: 1.0.0 (identical to 0.0.2-submitted; 2025-01-09)
 
 Source code: <https://github.com/kmmsks/ci_interactive>
 
