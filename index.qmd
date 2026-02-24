@@ -306,7 +306,20 @@ plotlyOutput("maingroup")
 
 This is an online supplement to
 
+
 **Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study**
+
+<br>
+
+Reference:
+
+Suokas K, Niemi R, Gutvilig M, J. McGrath J, Komulainen K, Suvisaari J, Elovainio M,
+Lumme S, Pirkola S, Hakulinen C. Lifetime incidence and age of onset of mental
+disorders, and 12-month service utilization in primary and secondary care: a Finnish
+nationwide registry study. Epidemiology and Psychiatric Sciences. 2025;34.
+doi:10.1017/s2045796025100061 
+
+[Link to the paper](https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/lifetime-incidence-and-age-of-onset-of-mental-disorders-and-12month-service-utilization-in-primary-and-secondary-care-a-finnish-nationwide-registry-study/FFD9FE0C32EBEC904FEF120E82127EFB){target="_blank" rel="noopener"}
 
 <br><br>
 
@@ -316,15 +329,10 @@ Incidence rates across the age range depict the number of people with a first-ti
 
 Service utilization rate depicts the percentage of individuals aged under 100 years who had a health care visit with a mental disorder diagnosis in the year `r pr_year`and were included in the study population on December 31, `r pr_year`.
 
-For now, please cite this page as:
 
-Suokas, K. (2025-01-09). Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study - Online Supplement. <https://mentalnet.shinyapps.io/lifetime/>
+Version: 0.1.0 (identical to 0.0.2-submitted; 2025-01-09)
 
-In the future, please cite the article (once published).
-
-Version: 0.0.2-submitted (2025-01-09)
-
-Source code: <https://github.com/kmmsks/ci_interactive>
+Source code: <https://github.com/kmmsks/ci_interactive>{target="_blank" rel="noopener"}
 
 ```{r}
 #| title: "The following ICD-10 diagnostic categories are included:"

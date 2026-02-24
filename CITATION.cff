@@ -1,10 +1,36 @@
 cff-version: 1.2.0
-message: "For now, please cite this page as below. In the future, please cite the article."
+message: "This repository contains the online supplement. Please cite the associated article."
+type: article
+
+title: "Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study"
+
 authors:
   - family-names: Suokas
     given-names: Kimmo
     orcid: https://orcid.org/0000-0001-6296-6343
-title: "Lifetime incidence and age of onset of mental disorders, and 12-month service utilization in primary and secondary care: a Finnish nationwide registry study - Online Supplement"
-version: 0.0.2-submitted
-date-released: 2025-01-09
-url: "https://github.com/kmmsks/ci_interactive"
+  - family-names: Niemi
+    given-names: R
+  - family-names: Gutvilig
+    given-names: M
+  - family-names: McGrath
+    given-names: J
+  - family-names: Komulainen
+    given-names: K
+  - family-names: Suvisaari
+    given-names: J
+  - family-names: Elovainio
+    given-names: M
+  - family-names: Lumme
+    given-names: S
+  - family-names: Pirkola
+    given-names: S
+  - family-names: Hakulinen
+    given-names: C
+
+journal: "Epidemiology and Psychiatric Sciences"
+year: 2025
+volume: 34
+
+doi: 10.1017/s2045796025100061
+
+repository-code: https://github.com/kmmsks/ci_interactive
